@@ -72,3 +72,192 @@ Where (birth_date BETWEEN '1952-01-01' AND '1955-12-31')
 AND (hire_date BETWEEN '1985-01-01' AND '1988-12-31');
 
 SELECT * FROM retirement_info;
+
+DROP TABLE retirement_info;
+
+-- Create new table for retiring employees
+SELECT emp_no, first_name, last_name
+INTO retirement_info
+FROM employees
+WHERE (birth_date BETWEEN '1952-01-01' AND '1955-12-31')
+AND (hire_date BETWEEN '1985-01-01' AND '1988-12-31');
+-- Check the table
+SELECT * FROM retirement_info;
+
+-- Joining departments and dept_manager tables
+SELECT d.dept_name,
+     dm.emp_no,
+     dm.from_date,
+     dm.to_date
+FROM departments as d
+INNER JOIN dept_manager as dm
+ON d.dept_no = dm.dept_no;
+
+SELECT retirement_info.emp_no,
+	retirement_info.first_name,
+retirement_info.last_name,
+	dept_emp.to_date
+FROM retirement_info
+LEFT JOIN dept_emp
+ON retirement_info.emp_no = dept_emp.emp_no;
+
+-- Abreviating the code
+SELECT ri.emp_no,
+	ri.first_name,
+ri.last_name,
+	de.to_date 
+FROM retirement_info as ri
+LEFT JOIN dept_emp as de
+ON ri.emp_no = de.emp_no;
+
+-- Retirement list showing only people who are current employees
+SELECT ri.emp_no,
+	ri.first_name,
+	ri.last_name,
+	de.to_date
+INTO current_emp
+FROM retirement_info as ri
+LEFT JOIN dept_emp as de
+ON ri.emp_no = de.emp_no
+Where de.to_date = ('9999-01-01')
+
+-- Employee count by department number
+SELECT COUNT(ce.emp_no), de.dept_no
+FROM current_emp as ce
+LEFT JOIN dept_emp as de
+ON ce.emp_no = de.emp_no
+GROUP BY de.dept_no
+ORDER BY de.dept_no;
+
+SELECT * FROM salaries
+ORDER BY to_date DESC;
+
+-- 7.3.5 getting the retirement info they are looking for
+SELECT emp_no, 
+	first_name, 
+	last_name,
+	gender
+INTO emp_info
+FROM employees
+WHERE (birth_date BETWEEN '1952-01-01' AND '1955-12-31')
+AND (hire_date BETWEEN '1985-01-01' AND '1988-12-31');
+
+SELECT e.emp_no,
+	e.first_name,
+	e.last_name,
+	e.gender,
+	s.salary,
+	de.to_date
+INTO emp_info
+FROM employees as e
+INNER JOIN salaries as s
+ON (e.emp_no = s.emp_no)
+INNER JOIN dept_emp as de
+ON (e.emp_no = de.emp_no)
+WHERE (e.birth_date BETWEEN '1952-01-01' AND '1955-12-31')
+     AND (e.hire_date BETWEEN '1985-01-01' AND '1988-12-31')
+	 AND (de.to_date = '9999-01-01');
+	 
+-- List of managers per department
+SELECT  dm.dept_no,
+        d.dept_name,
+        dm.emp_no,
+        ce.last_name,
+        ce.first_name,
+        dm.from_date,
+        dm.to_date
+INTO manager_info
+FROM dept_manager AS dm
+    INNER JOIN departments AS d
+        ON (dm.dept_no = d.dept_no)
+    INNER JOIN current_emp AS ce
+        ON (dm.emp_no = ce.emp_no);
+		
+SELECT ce.emp_no,
+ce.first_name,
+ce.last_name,
+d.dept_name	
+INTO dept_info
+FROM current_emp as ce
+INNER JOIN dept_emp AS de
+ON (ce.emp_no = de.emp_no)
+INNER JOIN departments AS d
+ON (de.dept_no = d.dept_no);
+
+SELECT r.emp_no,
+	r.first_name,
+	r.last_name,
+	ti.title,
+	ti.from_date,
+	s.salary
+INTO retirement_titles
+FROM retirement_info AS r
+INNER JOIN titles AS ti
+ON (r.emp_no = ti.emp_no)
+INNER JOIN salaries AS s
+on(r.emp_no = s.emp_no); 
+
+SELECT * FROM retirement_titles;
+
+SELECT emp_no,
+	first_name,
+	last_name,
+	title,
+	from_date,
+	salary
+INTO retirement_titles_nodup
+FROM 
+	(SELECT retirement_titles.emp_no,
+	retirement_titles.first_name,
+	retirement_titles.last_name,
+	retirement_titles.title,
+	retirement_titles.from_date,
+	retirement_titles.salary, ROW_NUMBER() OVER
+	(PARTITION BY (emp_no)
+	ORDER BY from_date DESC) rn
+	FROM retirement_titles)
+	tmp WHERE rn = 1
+	ORDER BY emp_no;
+
+SELECT * FROM retirement_titles;
+SELECT * FROM retirement_titles_nodup;
+
+SELECT r.title, COUNT(r.emp_no)
+INTO retirement_count
+FROM retirement_titles_nodup as r
+GROUP BY r.title;
+
+SELECT e.emp_no,
+	e.first_name,
+	e.last_name,
+	ti.title,
+	ti.from_date,
+	ti.to_date
+INTO mentor_start
+FROM employees AS e
+INNER JOIN titles AS ti
+ON (e.emp_no = ti.emp_no)
+WHERE (e.birth_date BETWEEN '1965-01-01' AND '1965-12-31');
+
+-- Removing duplicates
+SELECT emp_no,
+	first_name,
+	last_name,
+	title,
+	from_date,
+	to_date
+INTO mentors
+FROM 
+	(SELECT mentor_start.emp_no,
+	mentor_start.first_name,
+	mentor_start.last_name,
+	mentor_start.title,
+	mentor_start.from_date,
+	mentor_start.to_date, ROW_NUMBER() OVER
+	(PARTITION BY (emp_no)
+	ORDER BY from_date DESC) rn
+	FROM mentor_start)
+	tmp WHERE rn = 1
+	ORDER BY emp_no;
+
+SELECT * FROM mentors;
