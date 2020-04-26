@@ -184,19 +184,20 @@ ON (ce.emp_no = de.emp_no)
 INNER JOIN departments AS d
 ON (de.dept_no = d.dept_no);
 
-SELECT r.emp_no,
-	r.first_name,
-	r.last_name,
+SELECT cu.emp_no,
+	cu.first_name,
+	cu.last_name,
 	ti.title,
 	ti.from_date,
 	s.salary
-INTO retirement_titles
-FROM retirement_info AS r
+INTO retirement_titles_second
+FROM current_emp AS cu
 INNER JOIN titles AS ti
-ON (r.emp_no = ti.emp_no)
+ON (cu.emp_no = ti.emp_no)
 INNER JOIN salaries AS s
-on(r.emp_no = s.emp_no); 
+on(cu.emp_no = s.emp_no); 
 
+SELECT * FROM current_emp;
 SELECT * FROM retirement_titles;
 
 SELECT emp_no,
@@ -205,17 +206,17 @@ SELECT emp_no,
 	title,
 	from_date,
 	salary
-INTO retirement_titles_nodup
+INTO retirement_titles_nodup_second
 FROM 
-	(SELECT retirement_titles.emp_no,
-	retirement_titles.first_name,
-	retirement_titles.last_name,
-	retirement_titles.title,
-	retirement_titles.from_date,
-	retirement_titles.salary, ROW_NUMBER() OVER
+	(SELECT retirement_titles_second.emp_no,
+	retirement_titles_second.first_name,
+	retirement_titles_second.last_name,
+	retirement_titles_second.title,
+	retirement_titles_second.from_date,
+	retirement_titles_second.salary, ROW_NUMBER() OVER
 	(PARTITION BY (emp_no)
 	ORDER BY from_date DESC) rn
-	FROM retirement_titles)
+	FROM retirement_titles_second)
 	tmp WHERE rn = 1
 	ORDER BY emp_no;
 
@@ -223,9 +224,12 @@ SELECT * FROM retirement_titles;
 SELECT * FROM retirement_titles_nodup;
 
 SELECT r.title, COUNT(r.emp_no)
-INTO retirement_count
-FROM retirement_titles_nodup as r
+INTO retirement_count_second
+FROM retirement_titles_nodup_second as r
 GROUP BY r.title;
+
+SELECT * FROM retirement_count;
+SELECT * FROM retirement_count_second;
 
 SELECT e.emp_no,
 	e.first_name,
@@ -233,11 +237,12 @@ SELECT e.emp_no,
 	ti.title,
 	ti.from_date,
 	ti.to_date
-INTO mentor_start
+INTO mentor_start_second
 FROM employees AS e
 INNER JOIN titles AS ti
 ON (e.emp_no = ti.emp_no)
-WHERE (e.birth_date BETWEEN '1965-01-01' AND '1965-12-31');
+WHERE (e.birth_date BETWEEN '1965-01-01' AND '1965-12-31')
+	AND (ti.to_date = '9999-01-01');
 
 -- Removing duplicates
 SELECT emp_no,
@@ -246,18 +251,19 @@ SELECT emp_no,
 	title,
 	from_date,
 	to_date
-INTO mentors
+INTO mentors_second
 FROM 
-	(SELECT mentor_start.emp_no,
-	mentor_start.first_name,
-	mentor_start.last_name,
-	mentor_start.title,
-	mentor_start.from_date,
-	mentor_start.to_date, ROW_NUMBER() OVER
+	(SELECT mentor_start_second.emp_no,
+	mentor_start_second.first_name,
+	mentor_start_second.last_name,
+	mentor_start_second.title,
+	mentor_start_second.from_date,
+	mentor_start_second.to_date, ROW_NUMBER() OVER
 	(PARTITION BY (emp_no)
 	ORDER BY from_date DESC) rn
-	FROM mentor_start)
+	FROM mentor_start_second)
 	tmp WHERE rn = 1
 	ORDER BY emp_no;
 
 SELECT * FROM mentors;
+
